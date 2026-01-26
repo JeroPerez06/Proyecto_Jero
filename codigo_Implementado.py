@@ -1,165 +1,205 @@
-# ESTRUCTURA PRINCIPAL
+import json
+import logging
+import os
+
 # ------------------------------
-agenda = []   # Cada elemento será: {"id": int, "nombre": str, "telefono": str}
-
-# FUNCIONES
+# CONFIGURACIÓN
 # ------------------------------
 
-def insertar_elemento(agenda):
-    """
-    Pide datos al usuario, valida y agrega un nuevo contacto a la agenda.
-    """
-    print("\n--- Insertar contacto ---")
+ARCHIVO = "agenda_datos.json"
 
-    # Validar ID como entero
+logging.basicConfig(
+    filename="agenda.log",
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s"
+)
+
+# ------------------------------
+# GESTIÓN DE FICHEROS
+# ------------------------------
+
+def cargar_agenda():
+    if not os.path.exists(ARCHIVO):
+        logging.warning("Archivo JSON no encontrado. Agenda vacía creada.")
+        return []
+
     try:
-        id_contacto = int(input("Ingrese ID del contacto: "))
+        with open(ARCHIVO, "r", encoding="utf-8") as f:
+            logging.info("Agenda cargada desde fichero.")
+            return json.load(f)
+    except Exception:
+        logging.error("Error al leer el archivo JSON.")
+        return []
+
+
+def guardar_agenda(agenda):
+    try:
+        with open(ARCHIVO, "w", encoding="utf-8") as f:
+            json.dump(agenda, f, indent=4, ensure_ascii=False)
+            logging.info("Agenda guardada correctamente.")
+    except Exception:
+        logging.critical("Error al guardar la agenda.")
+
+# ------------------------------
+# FUNCIONES PRINCIPALES
+# ------------------------------
+
+def agregar_contacto(agenda):
+    print("\n--- Añadir contacto ---")
+
+    try:
+        id_contacto = int(input("ID: "))
     except ValueError:
-        print("Error: el ID debe ser un número entero.")
+        print("ID incorrecto.")
+        logging.error("ID no numérico al añadir.")
         return
 
-    # Validar nombre no vacío
-    nombre = input("Ingrese nombre: ").strip()
-    if nombre == "":
-        print("Error: el nombre no puede estar vacío.")
+    if any(c["id"] == id_contacto for c in agenda):
+        print("Ese ID ya existe.")
+        logging.warning("Intento de insertar ID duplicado.")
         return
 
-    # Validar teléfono no vacío
-    telefono = input("Ingrese teléfono: ").strip()
-    if telefono == "":
-        print("Error: el teléfono no puede estar vacío.")
+    nombre = input("Nombre: ").strip()
+    telefono = input("Teléfono: ").strip()
+
+    if not nombre or not telefono:
+        print("Los campos no pueden estar vacíos.")
+        logging.warning("Campos vacíos al añadir contacto.")
         return
 
-    # Crear el nuevo elemento
-    contacto = {
+    agenda.append({
         "id": id_contacto,
         "nombre": nombre,
         "telefono": telefono
-    }
+    })
 
-    agenda.append(contacto)
-    print("✔ Contacto agregado correctamente.")
+    guardar_agenda(agenda)
+    logging.info(f"Contacto añadido: {id_contacto}")
+    print("Contacto agregado correctamente.")
 
 
-def buscar_elemento(agenda):
-    """
-    Busca un contacto por ID y lo muestra si existe.
-    """
+def buscar_contacto(agenda):
     print("\n--- Buscar contacto ---")
+
     try:
-        id_buscar = int(input("Ingrese ID del contacto a buscar: "))
+        id_buscar = int(input("ID a buscar: "))
     except ValueError:
-        print("Error: el ID debe ser un número.")
+        print("ID inválido.")
+        logging.error("ID no válido en búsqueda.")
         return
 
     for contacto in agenda:
         if contacto["id"] == id_buscar:
-            print("✔ Contacto encontrado:")
             print(contacto)
-            return contacto
+            logging.info(f"Contacto encontrado: {id_buscar}")
+            return
 
-    print("No se encontró un contacto con ese ID.")
-    return None
+    print("Contacto no encontrado.")
+    logging.warning(f"Contacto no encontrado: {id_buscar}")
 
 
-def modificar_elemento(agenda):
-    """
-    Permite modificar un contacto existente manejando errores.
-    """
+def modificar_contacto(agenda):
     print("\n--- Modificar contacto ---")
+
     try:
-        id_modificar = int(input("Ingrese ID del contacto a modificar: "))
+        id_modificar = int(input("ID a modificar: "))
     except ValueError:
-        print("Error: el ID debe ser un número.")
+        print("ID inválido.")
+        logging.error("ID incorrecto al modificar.")
         return
 
     for contacto in agenda:
         if contacto["id"] == id_modificar:
-            print(f"Contacto encontrado: {contacto}")
-            nuevo_nombre = input("Nuevo nombre (enter para no cambiar): ").strip()
-            nuevo_telefono = input("Nuevo teléfono (enter para no cambiar): ").strip()
+            nuevo_nombre = input("Nuevo nombre (enter para mantener): ").strip()
+            nuevo_telefono = input("Nuevo teléfono (enter para mantener): ").strip()
 
-            # Actualización solo si el usuario ingresa valores
-            if nuevo_nombre != "":
+            if nuevo_nombre:
                 contacto["nombre"] = nuevo_nombre
-            if nuevo_telefono != "":
+            if nuevo_telefono:
                 contacto["telefono"] = nuevo_telefono
 
-            print("✔ Contacto modificado correctamente.")
+            guardar_agenda(agenda)
+            logging.info(f"Contacto modificado: {id_modificar}")
+            print("Contacto modificado.")
             return
 
-    print("No existe un contacto con ese ID.")
+    print("Contacto no existe.")
+    logging.warning(f"Intento de modificar ID inexistente: {id_modificar}")
 
 
-def eliminar_elemento(agenda):
-    """
-    Elimina un contacto por ID si existe.
-    Maneja errores si el ID no se encuentra.
-    """
+def eliminar_contacto(agenda):
     print("\n--- Eliminar contacto ---")
+
     try:
-        id_eliminar = int(input("Ingrese ID del contacto a eliminar: "))
+        id_eliminar = int(input("ID a eliminar: "))
     except ValueError:
-        print("Error: el ID debe ser un número.")
+        print("ID inválido.")
+        logging.error("ID incorrecto al eliminar.")
         return
 
     for i, contacto in enumerate(agenda):
         if contacto["id"] == id_eliminar:
             agenda.pop(i)
-            print("✔ Contacto eliminado correctamente.")
+            guardar_agenda(agenda)
+            logging.info(f"Contacto eliminado: {id_eliminar}")
+            print("Contacto eliminado.")
             return
 
-    print("No se encontró un contacto con ese ID.")
+    print("Contacto no encontrado.")
+    logging.warning(f"Intento de eliminar ID inexistente: {id_eliminar}")
 
 
-def mostrar_todos(agenda):
-    """
-    Muestra todos los contactos de la agenda formateados.
-    """
-    print("\n--- Agenda completa ---")
+def mostrar_contactos(agenda):
+    print("\n--- Agenda ---")
+
     if not agenda:
-        print("La agenda está vacía.")
+        print("Agenda vacía.")
         return
 
-    for contacto in agenda:
-        print(f"ID: {contacto['id']} | Nombre: {contacto['nombre']} | Teléfono: {contacto['telefono']}")
+    for c in agenda:
+        print(f"{c['id']} | {c['nombre']} | {c['telefono']}")
 
-# MENÚ INTERACTIVO
+# ------------------------------
+# MENÚ
 # ------------------------------
 
 def menu():
-    """
-    Menú interactivo principal del programa.
-    """
+    agenda = cargar_agenda()
+
     while True:
-        print("""\n===== AGENDA DE CONTACTOS =====
-1. Añade un contacto
-2. Busca un contacto
-3. Modifica un contacto
-4. Elimina un contacto
-5. Muestra a todos los contactos
+        print("""
+===== AGENDA =====
+1. Añadir contacto
+2. Buscar contacto
+3. Modificar contacto
+4. Eliminar contacto
+5. Mostrar contactos
 6. Salir
 """)
 
-        opcion = input("Seleccione una opción: ")
+        opcion = input("Opción: ")
 
         if opcion == "1":
-            insertar_elemento(agenda)
+            agregar_contacto(agenda)
         elif opcion == "2":
-            buscar_elemento(agenda)
+            buscar_contacto(agenda)
         elif opcion == "3":
-            modificar_elemento(agenda)
+            modificar_contacto(agenda)
         elif opcion == "4":
-            eliminar_elemento(agenda)
+            eliminar_contacto(agenda)
         elif opcion == "5":
-            mostrar_todos(agenda)
+            mostrar_contactos(agenda)
         elif opcion == "6":
+            logging.info("Programa cerrado por el usuario.")
             print("Saliendo del programa...")
             break
         else:
-            print("Opción inválida. Intente nuevamente.")
+            print("Opción incorrecta.")
+            logging.warning("Opción de menú inválida.")
 
+# ------------------------------
+# EJECUCIÓN
+# ------------------------------
 
-# Ejecutar el menú si se abre el archivo directamente
 if __name__ == "__main__":
     menu()
